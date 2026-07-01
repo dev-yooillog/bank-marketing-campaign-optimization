@@ -196,10 +196,13 @@ python src/train.py
 
 # 평가 및 시뮬레이션
 python src/evaluate.py
+
 출력 결과
 모델: outputs/models/
 ROC Curve: outputs/figures/roc_curves.png
 Feature Importance: outputs/figures/feature_importance.png
+```
+
 한계 및 개선 방향
 한계
 정적 데이터 기반 분석
