@@ -30,6 +30,7 @@
 ---
 
 ## 프로젝트 구조
+```
 bank-marketing-campaign-optimization/
 ├── data/
 │ ├── raw/
@@ -45,8 +46,7 @@ bank-marketing-campaign-optimization/
 │ ├── models/
 │ └── figures/
 └── README.md
-
-
+```
 ---
 
 ## 데이터 전처리
