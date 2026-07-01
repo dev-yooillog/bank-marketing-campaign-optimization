@@ -1,142 +1,224 @@
-# Campaign Response Optimization System
+# Bank Marketing Campaign Optimization
 
-은행 텔레마케팅 캠페인 데이터를 활용해 고객의 정기예금(deposit) 가입 여부를 예측하고, 예측 확률 기반 타겟팅으로 마케팅 비용 대비 효율을 개선하는 프로젝트
+은행 텔레마케팅 캠페인 데이터를 활용하여 고객의 정기예금 가입 여부를 예측하고,  
+마케팅 비용 대비 효율을 극대화하는 타겟팅 전략을 설계한 머신러닝 프로젝트입니다.
 
-## 문제 정의
+단순 예측 모델이 아니라,  
+**실제 캠페인 적용 가능한 의사결정 구조까지 포함한 분석 시스템**
 
-모든 고객에게 캠페인을 진행하면 비용이 낭비되고, 실제로 반응하는 고객은 일부에 불과합니다.
+---
 
-> **핵심 질문: "어떤 고객이 캠페인에 반응하는가?"**
+## 핵심 문제 정의
 
-고객 속성, 접촉 이력, 이전 캠페인 결과를 바탕으로 가입 확률을 예측하는 분류 모델을 구축하고, 예측 확률 상위 고객만 타겟팅했을 때의 비즈니스 효과를 시뮬레이션함
+> "어떤 고객에게 연락해야 전환율을 높이면서 비용을 줄일 수 있는가?"
 
-## 데이터
+---
 
-- 출처: Bank Marketing Dataset (포르투갈 은행 텔레마케팅 캠페인 기록)
-- 규모: 11,162건, 17개 변수
-- 주요 변수: 고객 정보(age, job, marital, education), 접촉 정보(contact, campaign, day, month), 이전 캠페인 이력(pdays, previous, poutcome)
-- 타겟: `deposit` (정기예금 가입 여부, yes/no)
-- 클래스 분포: No 52.6% / Yes 47.4% (비교적 균형 잡힌 분포)
+## 데이터셋
 
-## 핵심 이슈: 데이터 누수(Data Leakage)
+- 출처: UCI Bank Marketing Dataset
+- 데이터 크기: 11,162 rows × 17 columns
+- 타겟 변수: `deposit` (yes / no → 1 / 0)
 
-EDA 과정에서 `duration`(통화 시간)이 타겟과 가장 높은 상관관계(0.45)를 보였습니다. 하지만 통화 시간은 캠페인 통화가 끝난 후에만 알 수 있는 정보로, 캠페인을 시작하기 전 타겟팅 의사결정에는 사용할 수 없는 변수
+### 주요 변수
 
-이에 따라 두 가지 버전의 모델을 모두 구축해 비교함
+- 고객 정보: age, job, marital, education
+- 금융 정보: balance, housing, loan
+- 캠페인 정보: campaign, pdays, poutcome
+- 연락 정보: contact, duration
 
-| 버전 | 설명 | 용도 |
-|---|---|---|
-| with_duration | duration 포함 | 성능 상한선 참고용 |
-| no_duration | duration 제외 | 실제 캠페인 사전 타겟팅에 사용 가능한 모델 |
+---
 
-## 분석 프로세스
+## 프로젝트 구조
+bank-marketing-campaign-optimization/
+├── data/
+│ ├── raw/
+│ └── processed/
+├── src/
+│ ├── preprocessing.py
+│ ├── feature_engineering.py
+│ ├── train.py
+│ └── evaluate.py
+├── config/
+│ └── config.yaml
+├── outputs/
+│ ├── models/
+│ └── figures/
+└── README.md
 
-### 1. EDA
-- 타겟 클래스 분포 확인
-- 직군(job)별 캠페인 반응률 분석 → student, retired 그룹이 가장 높은 전환율
-- 접촉 횟수(campaign)와 전환율의 관계 → 3회 초과 시 전환율 급격히 하락
-- 이전 캠페인 결과(poutcome)별 전환율 → success 고객은 91.3%로 압도적으로 높음
 
-### 2. Feature Engineering
-- `campaign_bucket`: 접촉 횟수 구간화 (1회 / 2회 / 3회 / 4-5회 / 6회+)
-- `prev_success`: 이전 캠페인 성공 여부 플래그
-- `was_contacted_before`: 이전 접촉 여부 플래그 (`pdays`의 -1 값을 분리 처리)
-- `balance_segment`: 잔액 기반 고객 세그먼트 (negative / low / mid / high)
-- 범주형 변수 원-핫 인코딩 (17개 → 52개 컬럼)
+---
 
-### 3. 모델링
-- Baseline: Logistic Regression (class_weight='balanced')
-- Advanced: Random Forest, XGBoost (클래스 불균형 보정 적용)
-- 5-Fold Stratified Cross Validation으로 검증
+## 데이터 전처리
 
-### 4. 평가 지표
-ROC-AUC를 기본 지표로 사용하고, 마케팅 비용 절감 관점에서 Precision도 함께 확인했습니다.
+### 주요 처리 로직
 
-## 모델 성능
+- `deposit` → binary encoding (yes=1, no=0)
+- `pdays = -1` → NaN 처리 (미접촉 의미 분리)
+- 중복 데이터 제거
+- 결측치 탐지 및 로그 출력
 
-| 모델 | ROC-AUC (with duration) | ROC-AUC (no duration) |
-|---|---|---|
+---
+
+## Feature Engineering
+
+도메인 기반 마케팅 변수 생성
+
+### 생성 피처
+
+- **campaign_bucket**
+  - 접촉 횟수 구간화 (1회 / 2회 / 3회 / 4-5회 / 6회+)
+
+- **prev_success**
+  - 이전 캠페인 성공 여부
+
+- **was_contacted_before**
+  - 과거 접촉 여부
+
+- **balance_segment**
+  - 고객 잔액 구간화 (negative / low / mid / high)
+
+- 범주형 변수 One-Hot Encoding
+
+---
+
+## 모델링 전략
+
+### 핵심 설계: 데이터 누수 통제 실험
+
+`duration` 변수는 통화 종료 후에만 알 수 있는 값 → 실제 캠페인에서는 사용 불가
+
+따라서 두 가지 버전 비교
+
+### Version A (Upper Bound)
+- duration 포함
+- 모델 성능 상한선 확인 목적
+
+### Version B (Real-world)
+- duration 제외
+- 실제 타겟팅 적용 모델
+
+---
+
+## 모델
+
+- Logistic Regression (baseline)
+- Random Forest
+- XGBoost
+
+---
+
+## 학습 및 검증 전략
+
+- Stratified Train/Test Split
+- Stratified K-Fold Cross Validation
+- 평가 지표:
+  - ROC-AUC
+  - Average Precision
+  - Classification Report
+
+---
+
+## 핵심 평가 결과
+
+### ROC-AUC 비교
+
+| Model | With Duration | Without Duration |
+|------|---------------|------------------|
 | Logistic Regression | 0.852 | 0.656 |
 | Random Forest | **0.876** | **0.688** |
 | XGBoost | 0.859 | 0.682 |
 
-duration 포함 시 모든 모델의 AUC가 0.15~0.20 가량 상승하는데, 이는 모델 성능이 아니라 데이터 누수에 의한 결과입니다. 실전 배포 기준 모델은 **Random Forest (no_duration, AUC 0.688)** 입니다.
+---
 
-## 비즈니스 해석
+## 마케팅 시뮬레이션 (A/B Test)
 
-- 이전 캠페인에서 성공(`poutcome=success`)했던 고객은 재반응 확률이 매우 높음 → 재마케팅 우선순위 1순위
-- 접촉 횟수 3회를 넘어가면 전환율이 떨어짐 → 무리한 반복 접촉은 효율을 오히려 낮춤
-- student, retired 직군은 상대적으로 캠페인에 우호적 → 세그먼트별 메시징 차별화 여지
+### 실험 설계
 
-## A/B 테스트 시뮬레이션
+- Control: 전체 고객
+- Treatment: 예측 확률 상위 30%
 
-**가설**: "예측 확률 상위 30% 고객만 타겟팅하면 ROI가 증가할 것이다"
+### 결과
 
-**설계**
-- Control: 전체 고객 (2,233명)
-- Treatment: Random Forest(no_duration) 예측 확률 상위 30% 고객 (669명)
+| Group | Conversion Rate | Sample Size |
+|------|----------------|-------------|
+| Control | 47.4% | 2,233 |
+| Treatment | 70.3% | 669 |
 
-**결과**
+### 효과
 
-| 구분 | 대상 수 | 전환율 |
-|---|---|---|
-| Control (전체) | 2,233명 | 47.4% |
-| Treatment (상위 30%) | 669명 | 70.3% |
+- 접촉 비용 절감: **70%**
+- 전환율 개선: **+48.3%**
 
-- 접촉 비용 절감: **70.0%**
-- 전환율 개선: **48.3%**
+---
 
-동일한 예산으로 더 적은 고객에게 접촉하면서도 전환율을 크게 끌어올릴 수 있음을 확인했습니다. 단, 본 결과는 보유 데이터셋 기반 시뮬레이션이며, 실제 적용 전 온라인 A/B 테스트를 통한 검증이 필요합니다.
+## 핵심 인사이트
 
-## 폴더 구조
-bank-marketing-project/
-│
-├── data/
-│   ├── raw/                    # 원본 데이터
-│   └── processed/               # 전처리/피처 엔지니어링 결과
-│
-├── notebooks/
-│   ├── 01_eda.ipynb
-│   ├── 02_feature_engineering.ipynb
-│   └── 03_modeling.ipynb
-│
-├── src/
-│   ├── preprocessing.py
-│   ├── feature_engineering.py
-│   ├── train.py
-│   └── evaluate.py
-│
-├── config/
-│   └── config.yaml
-│
-├── outputs/
-│   ├── models/                 
-│   ├── figures/                 
-│   └── reports/
-│
-├── README.md
-└── requirements.txt
+### 1. 데이터 누수 영향
+
+- duration 포함 시 성능 과대평가 발생
+- 실제 환경에서는 사용할 수 없는 정보
+
+→ **모델 평가 시 시점 기반 feature 검증 필수**
+
+---
+
+### 2. 타겟팅 전략 효과
+
+- 상위 확률 고객만 타겟팅 시
+  - 비용 감소
+  - 전환율 증가
+
+→ 단순 예측이 아닌 **ranking 문제로 접근해야 함**
+
+---
+
+### 3. 중요한 변수
+
+- previous campaign outcome (`poutcome`)
+- contact 횟수 (`campaign`)
+- 고객 잔액 (`balance`)
+
+→ 행동 기반 변수 > 인구통계 변수
+
+---
 
 ## 실행 방법
 
 ```bash
-# 1. 데이터 전처리
+pip install -r requirements.txt
+
+# 데이터 전처리
 python src/preprocessing.py
 
-# 2. 피처 엔지니어링 (notebooks/02_feature_engineering.ipynb 실행)
-
-# 3. 모델 학습 및 평가
+# 모델 학습
 python src/train.py
+
+# 평가 및 시뮬레이션
 python src/evaluate.py
-```
+출력 결과
+모델: outputs/models/
+ROC Curve: outputs/figures/roc_curves.png
+Feature Importance: outputs/figures/feature_importance.png
+한계 및 개선 방향
+한계
+정적 데이터 기반 분석
+고객 행동 로그 부족
+실제 비용 구조 미반영
+개선 방향
+시계열 기반 고객 행동 모델링
+LTV (Customer Lifetime Value) 예측
+Uplift Modeling 적용 (진짜 캠페인 효과 측정)
+프로젝트 의의
 
-## 기술 스택
+이 프로젝트는 단순 분류 모델이 아니라:
 
-Python, Pandas, NumPy, Scikit-learn, XGBoost, Matplotlib
+데이터 누수 통제
+실제 비즈니스 적용 구조 설계
+타겟팅 전략 검증
 
-## 한계 및 향후 개선 방향
+까지 포함한 실무형 마케팅 최적화 시스템입니다.
 
-- 캠페인 시점의 거시경제 지표(금리, 고용률 등) 미반영
-- 시간에 따른 모델 성능 변화(Concept Drift) 미검증
-- 실제 비용/수익 데이터를 반영한 정밀 ROI 계산 필요
-- 온라인 A/B 테스트를 통한 실측 검증 필요
+한 줄 요약
+
+"예측 모델이 아니라, 돈이 되는 타겟팅 시스템을 설계한 프로젝트"
