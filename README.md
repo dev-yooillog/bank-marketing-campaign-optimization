@@ -202,26 +202,3 @@ python src/evaluate.py
 ROC Curve: outputs/figures/roc_curves.png
 Feature Importance: outputs/figures/feature_importance.png
 ```
-
-한계 및 개선 방향
-한계
-정적 데이터 기반 분석
-고객 행동 로그 부족
-실제 비용 구조 미반영
-개선 방향
-시계열 기반 고객 행동 모델링
-LTV (Customer Lifetime Value) 예측
-Uplift Modeling 적용 (진짜 캠페인 효과 측정)
-프로젝트 의의
-
-이 프로젝트는 단순 분류 모델이 아니라:
-
-데이터 누수 통제
-실제 비즈니스 적용 구조 설계
-타겟팅 전략 검증
-
-까지 포함한 실무형 마케팅 최적화 시스템입니다.
-
-한 줄 요약
-
-"예측 모델이 아니라, 돈이 되는 타겟팅 시스템을 설계한 프로젝트"
