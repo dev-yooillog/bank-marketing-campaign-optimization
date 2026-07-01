@@ -202,3 +202,16 @@ python src/evaluate.py
 ROC Curve: outputs/figures/roc_curves.png
 Feature Importance: outputs/figures/feature_importance.png
 ```
+---
+## 한계 및 개선 방향
+### 한계
+- 정적 데이터 기반 분석
+- 고객 행동 로그 부족
+- 실제 비용 구조 미반영
+### 개선 방향
+- 시계열 기반 고객 행동 모델링
+- LTV (Customer Lifetime Value) 예측
+- Uplift Modeling 적용 (진짜 캠페인 효과 측정)
+
+## 한 줄 요약
+"예측 모델이 아니라, 돈이 되는 타겟팅 시스템을 설계한 프로젝트"
